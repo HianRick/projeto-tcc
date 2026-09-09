@@ -1,0 +1,126 @@
+[gd_scene load_steps=16 format=3 uid="uid://c68mety64bigp"]
+
+[ext_resource type="Script" path="res://scenes/car/car.gd" id="1_0gshy"]
+[ext_resource type="PackedScene" path="res://scenes/models/raceCarWhite.glb" id="2_lbr3a"]
+[ext_resource type="Script" path="res://addons/godot_rl_agents/sensors/sensors_3d/RaycastSensor3D.gd" id="4_e1dys"]
+[ext_resource type="Script" path="res://scenes/car/car_ai_controller.gd" id="5_e2db2"]
+[ext_resource type="Script" path="res://scenes/car/cronometro.gd" id="7_crono"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_ypfti"]
+friction = 0.55
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_av0n1"]
+size = Vector3(1.09, 0.6, 2.02)
+
+[node name="Car" type="RigidBody3D"]
+collision_layer = 0
+collision_mask = 0
+axis_lock_linear_y = true
+axis_lock_angular_x = true
+axis_lock_angular_z = true
+physics_material_override = SubResource("PhysicsMaterial_ypfti")
+continuous_cd = true
+max_contacts_reported = 1
+contact_monitor = true
+mass = 300.0
+linear_damp_mode = 1
+linear_damp = 0.0
+angular_damp_mode = 1
+angular_damp = 0.0
+script = ExtResource("1_0gshy")
+
+[node name="car_base" parent="." instance=ExtResource("2_lbr3a")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0.525, -0.247, 0.994)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("BoxShape3D_av0n1")
+
+[node name="RayCastSensorWall" type="Node3D" parent="."]
+script = ExtResource("4_e1dys")
+n_rays_width = 17.0
+n_rays_height = 1.0
+ray_length = 45.0
+cone_width = 360.0
+cone_height = 0.0
+collide_with_areas = true
+
+[node name="@RayCast3D@70840" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-8.26873, 0, -44.2338)
+collide_with_areas = true
+
+[node name="@RayCast3D@70841" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-23.6894, 0, -38.2598)
+collide_with_areas = true
+
+[node name="@RayCast3D@70842" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-35.9108, 0, -27.1186)
+collide_with_areas = true
+
+[node name="@RayCast3D@70843" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-43.2822, 0, -12.3148)
+collide_with_areas = true
+
+[node name="@RayCast3D@70844" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-44.808, 0, 4.15208)
+collide_with_areas = true
+
+[node name="@RayCast3D@70845" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-40.2823, 0, 20.0582)
+collide_with_areas = true
+
+[node name="@RayCast3D@70846" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-30.3163, 0, 33.2554)
+collide_with_areas = true
+
+[node name="@RayCast3D@70847" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(-16.2559, 0, 41.9613)
+collide_with_areas = true
+
+[node name="@RayCast3D@70848" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(0, 0, 45)
+collide_with_areas = true
+
+[node name="@RayCast3D@70849" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(16.2559, 0, 41.9613)
+collide_with_areas = true
+
+[node name="@RayCast3D@70850" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(30.3163, 0, 33.2554)
+collide_with_areas = true
+
+[node name="@RayCast3D@70851" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(40.2823, 0, 20.0582)
+collide_with_areas = true
+
+[node name="@RayCast3D@70852" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(44.808, 0, 4.15208)
+collide_with_areas = true
+
+[node name="@RayCast3D@70853" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(43.2822, 0, -12.3148)
+collide_with_areas = true
+
+[node name="@RayCast3D@70854" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(35.9108, 0, -27.1186)
+collide_with_areas = true
+
+[node name="@RayCast3D@70855" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(23.6894, 0, -38.2598)
+collide_with_areas = true
+
+[node name="@RayCast3D@70856" type="RayCast3D" parent="RayCastSensorWall"]
+target_position = Vector3(8.26873, 0, -44.2338)
+collide_with_areas = true
+
+[node name="CarAIController" type="Node3D" parent="."]
+script = ExtResource("5_e2db2")
+reset_after = 3000
+
+[node name="Cronometro" type="Node" parent="."]
+script = ExtResource("7_crono")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-1, -1.90707e-08, 8.53174e-08, 0, 0.975917, 0.218143, -8.74228e-08, 0.218143, -0.975917, 0, 0.94, -3.37)
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

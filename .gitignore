@@ -1,0 +1,17 @@
+# Cache de importacao do Godot. Aqui e uma junction para fora da pasta
+# sincronizada, entao o padrao precisa cobrir tambem o caso sem barra.
+.godot
+.godot/
+/android/
+
+# Saidas de compilacao do .NET
+/bin/
+/obj/
+*.user
+
+# Configuracao local da maquina
+.claude/settings.local.json
+
+# Saidas de treino
+/treinos/
+*.onnx.data

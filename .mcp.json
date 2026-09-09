@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "godot": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:\\Users\\adm\\.claude\\plugins\\marketplaces\\godot-mcp\\plugins\\godot-mcp\\mcp-server\\dist\\index.js"
+      ],
+      "env": {
+        "GODOT_MCP_PORT": "6505"
+      }
+    }
+  }
+}

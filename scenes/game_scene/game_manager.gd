@@ -40,6 +40,12 @@ func _ready():
 	var cars = new_game_scene.get_node("Cars") as CarManager
 	var track = new_game_scene.get_node("Track") as Track
 
+	# Menos carros deixam a mensagem trocada com o Python menor e o bloqueio da
+	# engine mais curto, o que torna a observacao visual utilizavel.
+	for argumento in OS.get_cmdline_args():
+		if argumento.begins_with("--carros="):
+			cars.number_of_cars_to_spawn = maxi(1, int(argumento.split("=")[1]))
+
 	cars.ui = new_game_scene.get_node("UI") as UI
 	cars.seconds_until_race_begins = seconds_until_race_begins
 
@@ -59,3 +65,30 @@ func _ready():
 			cars.player_controlled = true
 			sync.speed_up = 1.0
 	add_child(new_game_scene)
+
+	# A camera livre e instrumentacao de observacao: so aparece com --assistir e
+	# nao altera fisica, observacoes nem recompensa.
+	if "--assistir" in OS.get_cmdline_args():
+		_criar_camera_livre(new_game_scene, cars)
+
+
+func _criar_camera_livre(cena: Node3D, cars: CarManager):
+	var camera := CameraLivre.new()
+	camera.name = "CameraLivre"
+	camera.far = 2000.0
+	cena.add_child(camera)
+
+	# Comeca acima do centro do circuito, olhando para baixo em diagonal.
+	var centro := Vector3(23.9, 0.0, -6.8)
+	camera.global_position = centro + Vector3(0.0, 120.0, 110.0)
+	camera.look_at(centro, Vector3.UP)
+	camera.rotation = Vector3(camera.rotation.x, camera.rotation.y, 0.0)
+
+	var lista: Array[Node3D] = []
+	for c in cars.get_children():
+		if c is Car:
+			lista.append(c)
+	camera.definir_carros(lista)
+
+	print("[CameraLivre] botao direito olha, WASD move, Q/E desce e sobe, " +
+		"Shift acelera, Tab segue um carro, 1-9 escolhe qual (%d carros)" % lista.size())

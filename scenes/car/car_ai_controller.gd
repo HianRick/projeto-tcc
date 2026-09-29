@@ -37,11 +37,19 @@ func get_reward() -> float:
 ## Acelerador e freio sao eixos separados para que o agente possa segurar um
 ## resto de freio entrando na curva. Ambos sao contínuos em [-1, 1] porque e o
 ## que o PPO produz; a metade negativa e tratada como pedal solto.
+##
+## A ORDEM DAS CHAVES IMPORTA, e tem de ser alfabetica. O lado Python monta um
+## gymnasium.spaces.Dict, que reordena as chaves em ordem alfabetica, e a rede
+## aprende nessa ordem. Ja o lado Godot, na inferencia ONNX, fatia a saida da
+## rede na ordem de insercao deste dicionario (sync.gd, _extract_action_dict).
+## Se as duas ordens divergirem, o modelo treinado dirige corretamente durante
+## o treino e vira lixo na inferencia: o freio recebe o acelerador, e assim por
+## diante. Declarar em ordem alfabetica faz as duas pontas coincidirem.
 func get_action_space() -> Dictionary:
 	return {
-		"throttle": {"size": 1, "action_type": "continuous"},
 		"brake": {"size": 1, "action_type": "continuous"},
 		"steering": {"size": 1, "action_type": "continuous"},
+		"throttle": {"size": 1, "action_type": "continuous"},
 	}
 
 

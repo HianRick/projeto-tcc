@@ -50,6 +50,15 @@ var track: Track
 ## Raio da roda. So afeta o visual: define a que velocidade elas giram.
 @export var wheel_radius_m := 0.21
 
+@export_group("Recompensa")
+## Penalidade terminal ao bater. O padrao e zero de proposito: encerrar o
+## episodio ja e a punicao, porque o agente perde todo o progresso que ainda
+## faria. Como progresso so soma, qualquer avanco antes da batida rende mais
+## que ficar parado - e e esse o gradiente que faltava. Um valor alto demais
+## aqui recria a timidez: se bater cedo ficar pior que nao sair do lugar, a
+## politica volta a escolher a imobilidade.
+@export var penalidade_por_batida := 0.0
+
 @onready var ai_controller: CarAIController = $CarAIController
 @onready var raycast_sensor_wall: RayCastSensor3D = $RayCastSensorWall
 @onready var camera: Camera3D = $"Camera3D"
@@ -100,6 +109,9 @@ var training_mode: bool
 ## registrar quantos toques houve em cada volta.
 var toques_no_muro := 0
 
+## Levantada pelo sinal de colisao e consumida no proximo passo de fisica.
+var _bateu := false
+
 var initial_transform: Transform3D
 var _just_reset: bool
 
@@ -139,6 +151,7 @@ func reset():
 		process_mode = Node.PROCESS_MODE_INHERIT
 
 	_just_reset = true
+	_bateu = false
 
 func _integrate_forces(state: PhysicsDirectBodyState3D):
 	if _just_reset:
@@ -183,6 +196,19 @@ func _integrate_forces(state: PhysicsDirectBodyState3D):
 
 
 func _physics_process(delta):
+	# Bater e falhar: o episodio acaba ali. Tratado aqui, e nao dentro do sinal
+	# de colisao, porque teletransportar um corpo durante o callback de fisica
+	# da resultado indefinido.
+	#
+	# Isto tambem resolve o disparo repetido: antes, um carro encostado no muro
+	# reemitia body_entered dezenas de vezes por segundo e acumulava penalidade
+	# sem limite. Agora o primeiro toque termina o episodio, e so ha um evento.
+	if _bateu:
+		_bateu = false
+		if ai_controller.heuristic != "human":
+			_end_episode(-penalidade_por_batida)
+			return
+
 	# Sem sistema de voltas, o episodio do agente termina por limite de passos
 	# (reset_after no CarAIController). Isso vale so para o RL: quando e voce
 	# dirigindo, o carro nunca e teleportado de volta para a largada.
@@ -366,4 +392,4 @@ func get_normalized_velocity_in_player_reference():
 
 func _on_body_entered(_body):
 	toques_no_muro += 1
-	ai_controller.reward -= 4.0
+	_bateu = true

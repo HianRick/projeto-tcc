@@ -1,4 +1,5 @@
 extends Node3D
+const Pistas := preload("res://scenes/track/pistas.gd")
 ## Exporta a linha central da pista amostrada, para analise fora do Godot.
 
 func _ready():
@@ -9,6 +10,7 @@ func _ready():
 	cars.number_of_cars_to_spawn = 1
 	cars.ui = gs.get_node("UI")
 	gs.get_node("Track").training_mode = true
+	Pistas.aplicar(gs)
 	add_child(gs)
 
 	var curva: Curve3D = gs.get_node("Track").track_path.curve
@@ -18,9 +20,20 @@ func _ready():
 	curva.bake_interval = 0.02
 	var L := curva.get_baked_length()
 	print("TRACKLEN %f" % L)
+	# Grava em arquivo: imprimir dezenas de milhares de linhas no console e
+	# ordens de grandeza mais lento que escreve-las, e para um circuito de 4 km
+	# isso domina o tempo de execucao.
+	var destino := "C:/tcc/treinos/tracado.txt"
+	for a in OS.get_cmdline_args():
+		if a.begins_with("--saida="):
+			destino = a.split("=")[1]
+	var f := FileAccess.open(destino, FileAccess.WRITE)
+	f.store_line("TRACKLEN %f" % L)
 	var s := 0.0
 	while s < L:
 		var p := curva.sample_baked(s)
-		print("P %f %f %f" % [s, p.x, p.z])
+		f.store_line("P %f %f %f" % [s, p.x, p.z])
 		s += 0.05
+	f.close()
+	print("GRAVADO %s  (%.1f m)" % [destino, L])
 	get_tree().quit()

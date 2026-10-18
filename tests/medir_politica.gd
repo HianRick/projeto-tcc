@@ -1,4 +1,5 @@
 extends Node3D
+const Pistas := preload("res://scenes/track/pistas.gd")
 ## Mede o desempenho da politica que estiver em model.onnx.
 ##
 ## Roda a inferencia por um tempo fixo e imprime distancia percorrida,
@@ -40,6 +41,21 @@ func _ready():
 	cars.ui = gs.get_node("UI")
 	gs.get_node("Track").training_mode = true
 
+	# --espelhar nega o X de todos os pontos de controle: mesma distribuicao de
+	# raios, todas as curvas trocadas de lado. E um teste de generalizacao sem
+	# nenhuma decisao de projeto nova - a dificuldade e identica por construcao.
+	if "--espelhar" in OS.get_cmdline_args():
+		var curva: Curve3D = gs.get_node("Track").track_path.curve
+		for i in curva.point_count:
+			var pos := curva.get_point_position(i)
+			var ent := curva.get_point_in(i)
+			var sai := curva.get_point_out(i)
+			curva.set_point_position(i, Vector3(-pos.x, pos.y, pos.z))
+			curva.set_point_in(i, Vector3(-ent.x, ent.y, ent.z))
+			curva.set_point_out(i, Vector3(-sai.x, sai.y, sai.z))
+		print("PISTA ESPELHADA")
+
+	Pistas.aplicar(gs)
 	add_child(gs)
 
 	for c in cars.get_children():

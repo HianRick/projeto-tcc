@@ -1,4 +1,5 @@
 extends Node3D
+const Pistas := preload("res://scenes/track/pistas.gd")
 
 ## TRAINING     - varios carros em paralelo, controlados pelo Python via TCP.
 ## INFERENCE    - um carro, dirigido por um modelo .onnx ja treinado.
@@ -36,6 +37,9 @@ func _ready():
 	print("[GameManager] modo: %s" % GameModes.keys()[game_mode])
 
 	var new_game_scene: Node3D = game_scene.instantiate()
+	# Antes de qualquer configuracao: o Track e o CarManager leem a curva no
+	# _ready, que so dispara ao entrar na arvore.
+	Pistas.aplicar(new_game_scene)
 	var sync = new_game_scene.get_node("Sync")
 	var cars = new_game_scene.get_node("Cars") as CarManager
 	var track = new_game_scene.get_node("Track") as Track
@@ -78,9 +82,13 @@ func _criar_camera_livre(cena: Node3D, cars: CarManager):
 	camera.far = 2000.0
 	cena.add_child(camera)
 
-	# Comeca acima do centro do circuito, olhando para baixo em diagonal.
-	var centro := Vector3(23.9, 0.0, -6.8)
-	camera.global_position = centro + Vector3(0.0, 120.0, 110.0)
+	# Comeca acima do centro do circuito, olhando para baixo em diagonal. O
+	# enquadramento vem da extensao do tracado, para servir a qualquer pista.
+	var caixa := Pistas.centro_e_raio(cena)
+	var centro: Vector3 = caixa[0]
+	var raio: float = maxf(caixa[1], 1.0)
+	camera.far = maxf(2000.0, raio * 8.0)
+	camera.global_position = centro + Vector3(0.0, raio * 1.1, raio * 1.0)
 	camera.look_at(centro, Vector3.UP)
 	camera.rotation = Vector3(camera.rotation.x, camera.rotation.y, 0.0)
 

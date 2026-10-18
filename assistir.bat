@@ -29,5 +29,12 @@ echo   convertendo o modelo para arquivo unico...
 if errorlevel 1 exit /b 1
 
 echo   abrindo o simulador...
-"%GODOT%" --path "%PROJ%" --modo=inference %~2
+REM  O cmd quebra argumentos no "=", entao %~2 traria so "--pista" e perderia
+REM  o valor. %* preserva a linha de comando crua; basta remover o primeiro
+REM  token (o nome da execucao) e repassar o resto intacto.
+set "TODOS=%*"
+setlocal enabledelayedexpansion
+set "EXTRA=!TODOS:*%NOME%=!"
+"%GODOT%" --path "%PROJ%" --modo=inference !EXTRA!
+endlocal
 endlocal

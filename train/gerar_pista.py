@@ -115,22 +115,28 @@ def costurar(vias, semente=0, com_marcas=False):
 
 
 def reamostrar(volta, passo):
-    """Reamostra a passo constante, para os pontos de controle ficarem
-    distribuidos pela extensao e nao pela densidade do levantamento."""
-    saida, acc, i = [volta[0]], 0.0, 0
-    while i < len(volta) - 1:
-        d = math.dist(volta[i], volta[i + 1])
-        if acc + d < passo:
-            acc += d
-            i += 1
-            continue
-        t = (passo - acc) / d
-        novo = (volta[i][0] + t * (volta[i + 1][0] - volta[i][0]),
-                volta[i][1] + t * (volta[i + 1][1] - volta[i][1]))
-        saida.append(novo)
-        volta = volta[:i + 1] + [novo] + volta[i + 1:]
-        i += 1
-        acc = 0.0
+    """Reamostra o laco fechado a passo constante.
+
+    O espacamento precisa dividir a extensao exatamente, senao sobra um
+    segmento de fechamento com comprimento diferente dos demais - que vira
+    uma quina na emenda e, pior, um trecho de pista sem geometria.
+    """
+    acum = [0.0]
+    for i in range(len(volta)):
+        a, b = volta[i], volta[(i + 1) % len(volta)]
+        acum.append(acum[-1] + math.dist(a, b))
+    total = acum[-1]
+    n = max(3, int(round(total / passo)))
+
+    saida, j = [], 0
+    for k in range(n):
+        alvo = total * k / n
+        while j < len(volta) and acum[j + 1] < alvo:
+            j += 1
+        a, b = volta[j], volta[(j + 1) % len(volta)]
+        seg = acum[j + 1] - acum[j]
+        t = 0.0 if seg <= 0 else (alvo - acum[j]) / seg
+        saida.append((a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])))
     return saida
 
 
@@ -150,10 +156,14 @@ def escrever_tres(pontos, caminho):
     """Curve3D em formato texto. Os controles in/out recebem um terco da corda
     aos vizinhos, o que converte a poligonal numa Bezier suave que passa pelos
     pontos (equivalente a Catmull-Rom)."""
+    # O Curve3D do Godot e aberto: vai do primeiro ao ultimo ponto e para.
+    # Para o circuito fechar, o primeiro ponto precisa ser repetido no fim -
+    # sem isso resta um vao sem asfalto e sem muros na linha de largada.
+    fechado = list(pontos) + [pontos[0]]
     n = len(pontos)
     dados = []
-    for i, p in enumerate(pontos):
-        ant, prox = pontos[(i - 1) % n], pontos[(i + 1) % n]
+    for i, p in enumerate(fechado):
+        ant, prox = pontos[(i - 1) % n], pontos[(i + 1) % n]  # tangente ciclica
         tx, ty = (prox[0] - ant[0]) / 6.0, (prox[1] - ant[1]) / 6.0
         # O norte vai para -Z, e nao para +Z. Visto de cima no Godot (camera
         # olhando para -Y), +Z aponta para a parte de baixo da tela, ou seja,
@@ -168,9 +178,9 @@ def escrever_tres(pontos, caminho):
         f.write("bake_interval = 0.5\n")
         f.write("_data = {\n")
         f.write('"points": PackedVector3Array(%s),\n' % corpo)
-        f.write('"tilts": PackedFloat32Array(%s)\n' % ", ".join(["0.0"] * n))
+        f.write('"tilts": PackedFloat32Array(%s)\n' % ", ".join(["0.0"] * len(fechado)))
         f.write("}\n")
-        f.write("point_count = %d\n" % n)
+        f.write("point_count = %d\n" % len(fechado))
 
 
 def main():

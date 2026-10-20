@@ -112,6 +112,16 @@ var toques_no_muro := 0
 ## Levantada pelo sinal de colisao e consumida no proximo passo de fisica.
 var _bateu := false
 
+## Quando definido, calcula os comandos por regra em vez de rede neural. E a
+## condicao de heuristica pura: mesmo veiculo, mesmo ambiente, mesmas acoes.
+var piloto_heuristico = null
+
+## Quando definida, os pontos de referencia entregues ao agente vem desta
+## trajetoria em vez da linha central. E a condicao de RL com heuristica: a
+## rede, a recompensa e o numero de observacoes seguem identicos, e so a
+## informacao geometrica disponivel ao agente muda.
+var trajetoria_referencia = null
+
 var initial_transform: Transform3D
 var _just_reset: bool
 
@@ -195,6 +205,13 @@ func _integrate_forces(state: PhysicsDirectBodyState3D):
 	)
 
 
+## O sync marca o agente como "human" sempre que nao ha rede nem modelo, o que
+## inclui o modo da heuristica. Quem define se ha alguem no teclado e a ausencia
+## de piloto heuristico instalado.
+func _dirigido_por_humano() -> bool:
+	return ai_controller.heuristic == "human" and piloto_heuristico == null
+
+
 func _physics_process(delta):
 	# Bater e falhar: o episodio acaba ali. Tratado aqui, e nao dentro do sinal
 	# de colisao, porque teletransportar um corpo durante o callback de fisica
@@ -205,14 +222,14 @@ func _physics_process(delta):
 	# sem limite. Agora o primeiro toque termina o episodio, e so ha um evento.
 	if _bateu:
 		_bateu = false
-		if ai_controller.heuristic != "human":
+		if not _dirigido_por_humano():
 			_end_episode(-penalidade_por_batida)
 			return
 
 	# Sem sistema de voltas, o episodio do agente termina por limite de passos
 	# (reset_after no CarAIController). Isso vale so para o RL: quando e voce
 	# dirigindo, o carro nunca e teleportado de volta para a largada.
-	if ai_controller.needs_reset and ai_controller.heuristic != "human":
+	if ai_controller.needs_reset and not _dirigido_por_humano():
 		_end_episode()
 
 	var acelerador := 0.0
@@ -223,7 +240,14 @@ func _physics_process(delta):
 	# dirigindo. O cache acima evita recalcular quando as observacoes pedirem.
 	update_track_related_data()
 
-	if ai_controller.heuristic == "human":
+	if piloto_heuristico != null:
+		# A heuristica escreve nos mesmos campos que o agente, entao daqui para
+		# baixo o modelo dinamico nao distingue quem esta dirigindo.
+		piloto_heuristico.dirigir(self)
+		acelerador = requested_throttle
+		freio = requested_brake
+		comando_volante = requested_steering
+	elif _dirigido_por_humano():
 		if Input.is_action_pressed("move_forward"):
 			acelerador = 1.0
 		if Input.is_action_pressed("move_backward"):
@@ -369,9 +393,13 @@ func get_next_track_points(num_points: int, step_size: float) -> Array:
 	var closest_offset = current_offset
 
 	for i in range(0, num_points):
-		var current_point = track.track_path.curve.sample_baked(
-			fmod(closest_offset + step_size * (i + 1), track_length)
-		)
+		var offset: float = fmod(closest_offset + step_size * (i + 1), track_length)
+		var current_point: Vector3
+		if trajetoria_referencia != null:
+			current_point = trajetoria_referencia.em(offset)
+			current_point.y = global_position.y
+		else:
+			current_point = track.track_path.curve.sample_baked(offset)
 		var local = to_local(current_point) / (num_points * step_size)
 		temp_array.append_array([local.x, local.z])
 	return temp_array

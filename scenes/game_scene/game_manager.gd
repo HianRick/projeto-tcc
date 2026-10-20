@@ -80,11 +80,26 @@ func _ready():
 	if game_mode == GameModes.HEURISTICA:
 		_instalar_piloto(cars)
 	_instalar_trajetoria_de_referencia(cars)
+	if "--sensores" in OS.get_cmdline_args():
+		_mostrar_sensores(cars)
 
 	# A camera livre e instrumentacao de observacao: so aparece com --assistir e
 	# nao altera fisica, observacoes nem recompensa.
 	if "--assistir" in OS.get_cmdline_args():
 		_criar_camera_livre(new_game_scene, cars)
+
+
+## Desenha os raios do sensor de parede de cada veiculo. Instrumentacao de
+## observacao: nao altera fisica, observacoes nem recompensa.
+func _mostrar_sensores(cars: CarManager):
+	var script := load("res://scenes/car/sensor_visual.gd")
+	var n := 0
+	for c in cars.get_children():
+		if c is Car:
+			var visual = script.new()
+			visual.instalar(c.raycast_sensor_wall)
+			n += 1
+	print("[Sensores] desenhando os raios de %d veiculo(s)" % n)
 
 
 ## Troca os pontos da linha central, nas observacoes do agente, pelos pontos
@@ -145,7 +160,10 @@ func _criar_camera_livre(cena: Node3D, cars: CarManager):
 	for c in cars.get_children():
 		if c is Car:
 			lista.append(c)
-	camera.definir_carros(lista)
+	camera.definir_carros(lista, cars.player_controlled)
 
-	print("[CameraLivre] botao direito olha, WASD move, Q/E desce e sobe, " +
-		"Shift acelera, Tab segue um carro, 1-9 escolhe qual (%d carros)" % lista.size())
+	var mover := "IJKL" if cars.player_controlled else "WASD"
+	var vertical := "U/O" if cars.player_controlled else "Q/E"
+	print(("[CameraLivre] setas olham, %s move, %s desce e sobe, Shift acelera, " +
+		"Tab segue um carro, C volta para a camera do carro (%d carros)") % [
+		mover, vertical, lista.size()])

@@ -19,6 +19,16 @@ func _ready():
 	Pistas.aplicar(gs)
 	add_child(gs)
 
+	# --sensores desenha os raios; --carro enquadra no veiculo em vez do circuito.
+	var carro: Car = null
+	for c in cars.get_children():
+		if c is Car:
+			carro = c
+			break
+	if "--sensores" in OS.get_cmdline_args() and carro != null:
+		var visual = load("res://scenes/car/sensor_visual.gd").new()
+		visual.instalar(carro.raycast_sensor_wall)
+
 	var caixa := Pistas.centro_e_raio(gs)
 	var centro: Vector3 = caixa[0]
 	var raio: float = maxf(caixa[1], 1.0)
@@ -31,6 +41,10 @@ func _ready():
 	cam.global_position = centro + Vector3(0.0, raio * 2.4, 0.0)
 	cam.rotation = Vector3(-PI / 2.0, 0.0, 0.0)
 	cam.current = true
+
+	if "--carro" in OS.get_cmdline_args() and carro != null:
+		centro = carro.global_position
+		raio = 30.0
 
 	var destino := "C:/tcc/treinos/foto.png"
 	var zoom := 1.0

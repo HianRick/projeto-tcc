@@ -19,7 +19,12 @@ class_name CameraLivre
 ##   Shift                   acelerar o movimento
 ##   roda do mouse           ajustar a velocidade base
 ##   Tab                     alternar entre camera livre e seguir um carro
+##   C                       voltar para a camera do carro, e de volta
 ##   1 .. 9                  escolher qual carro seguir
+##
+## Quando voce esta dirigindo, W A S D pertencem ao carro, e a camera passa a
+## usar I J K L (mais U e O para descer e subir) - senao cada tecla faria as
+## duas coisas ao mesmo tempo.
 
 @export var velocidade := 12.0
 @export var sensibilidade := 0.003
@@ -30,6 +35,9 @@ var _giro := Vector2.ZERO
 var _seguindo: Node3D = null
 var _carros: Array[Node3D] = []
 var _indice_carro := 0
+## Com piloto ao teclado, as teclas de movimento mudam para nao colidir.
+var _ha_piloto := false
+var _camera_do_carro: Camera3D = null
 
 
 func _ready():
@@ -39,10 +47,13 @@ func _ready():
 	_giro = Vector2(rotation.y, rotation.x)
 
 
-func definir_carros(lista: Array):
+func definir_carros(lista: Array, ha_piloto: bool = false):
 	_carros.clear()
 	for c in lista:
 		_carros.append(c)
+	_ha_piloto = ha_piloto
+	if not _carros.is_empty():
+		_camera_do_carro = _carros[0].get_node_or_null("Camera3D") as Camera3D
 
 
 func _unhandled_input(evento):
@@ -62,12 +73,39 @@ func _unhandled_input(evento):
 		_giro.y = clampf(_giro.y - evento.relative.y * sensibilidade, -1.5, 1.5)
 		rotation = Vector3(_giro.y, _giro.x, 0.0)
 
-	elif evento is InputEventKey and evento.pressed and not evento.echo:
-		if evento.keycode == KEY_TAB:
-			_alternar_perseguicao()
-		elif evento.keycode >= KEY_1 and evento.keycode <= KEY_9:
-			_indice_carro = evento.keycode - KEY_1
-			_seguindo = _carro_valido(_indice_carro)
+
+
+## Teclas tratadas em _input, antes da interface: o Tab e a tecla padrao de
+## navegacao de foco do Godot e seria consumida pela UI da cena antes de
+## chegar aqui por _unhandled_input.
+func _input(evento):
+	if not (evento is InputEventKey and evento.pressed and not evento.echo):
+		return
+	var tecla: int = evento.physical_keycode
+	if tecla == 0:
+		tecla = evento.keycode
+
+	if tecla == KEY_TAB:
+		_alternar_perseguicao()
+	elif tecla == KEY_C:
+		_alternar_camera()
+	elif tecla >= KEY_1 and tecla <= KEY_9:
+		_indice_carro = tecla - KEY_1
+		_seguindo = _carro_valido(_indice_carro)
+	else:
+		return
+	get_viewport().set_input_as_handled()
+
+
+
+## Devolve o comando a camera de bordo do carro, e retoma depois.
+func _alternar_camera():
+	if _camera_do_carro == null:
+		return
+	if current:
+		_camera_do_carro.current = true
+	else:
+		current = true
 
 
 func _alternar_perseguicao():
@@ -110,18 +148,26 @@ func _process(delta_bruto):
 		_giro = Vector2(rotation.y, rotation.x)
 		return
 
+	# Com alguem ao volante, W A S D pertencem ao carro.
+	var frente := KEY_I if _ha_piloto else KEY_W
+	var tras := KEY_K if _ha_piloto else KEY_S
+	var esq := KEY_J if _ha_piloto else KEY_A
+	var dir := KEY_L if _ha_piloto else KEY_D
+	var sobe := KEY_O if _ha_piloto else KEY_E
+	var desce := KEY_U if _ha_piloto else KEY_Q
+
 	var direcao := Vector3.ZERO
-	if Input.is_key_pressed(KEY_W):
+	if Input.is_key_pressed(frente):
 		direcao -= global_transform.basis.z
-	if Input.is_key_pressed(KEY_S):
+	if Input.is_key_pressed(tras):
 		direcao += global_transform.basis.z
-	if Input.is_key_pressed(KEY_A):
+	if Input.is_key_pressed(esq):
 		direcao -= global_transform.basis.x
-	if Input.is_key_pressed(KEY_D):
+	if Input.is_key_pressed(dir):
 		direcao += global_transform.basis.x
-	if Input.is_key_pressed(KEY_E):
+	if Input.is_key_pressed(sobe):
 		direcao += Vector3.UP
-	if Input.is_key_pressed(KEY_Q):
+	if Input.is_key_pressed(desce):
 		direcao -= Vector3.UP
 
 	if direcao == Vector3.ZERO:

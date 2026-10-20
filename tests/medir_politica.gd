@@ -28,6 +28,15 @@ func _ready():
 	var gs: Node3D = load("res://scenes/game_scene/game_scene.tscn").instantiate()
 	var sync = gs.get_node("Sync")
 	sync.control_mode = sync.ControlModes.ONNX_INFERENCE
+
+	# Com --linha=<arquivo>, mede a heuristica em vez de uma politica treinada:
+	# mesmo veiculo, mesma pista, mesma janela, so muda quem dirige.
+	var linha := ""
+	for a in OS.get_cmdline_args():
+		if a.begins_with("--linha="):
+			linha = a.split("=")[1]
+	if not linha.is_empty():
+		sync.control_mode = sync.ControlModes.HUMAN
 	# Com --amostrar, sorteia a acao em vez de usar a media da distribuicao -
 	# que e como o agente se comporta durante o treino.
 	if "--amostrar" in OS.get_cmdline_args():
@@ -58,10 +67,29 @@ func _ready():
 	Pistas.aplicar(gs)
 	add_child(gs)
 
+	# Troca a referencia geometrica das observacoes pela trajetoria calculada.
+	var obs := ""
+	for a in OS.get_cmdline_args():
+		if a.begins_with("--linha_obs="):
+			obs = a.split("=")[1]
+	var traj = null
+	if not obs.is_empty():
+		traj = load("res://scenes/car/trajetoria.gd").new()
+		if not traj.carregar(obs):
+			traj = null
+
 	for c in cars.get_children():
 		if c is Car:
 			carro = c
 			break
+	if not linha.is_empty():
+		var piloto = load("res://scenes/car/piloto_heuristico.gd").new()
+		if piloto.carregar(linha):
+			carro.piloto_heuristico = piloto
+
+	if traj != null:
+		carro.trajetoria_referencia = traj
+
 	# A janela de medida aqui e o tempo, nao o episodio.
 	carro.ai_controller.reset_after = 99999999
 	_offset_anterior = carro.current_offset

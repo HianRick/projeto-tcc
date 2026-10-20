@@ -4,7 +4,8 @@ const Pistas := preload("res://scenes/track/pistas.gd")
 ## TRAINING     - varios carros em paralelo, controlados pelo Python via TCP.
 ## INFERENCE    - um carro, dirigido por um modelo .onnx ja treinado.
 ## TEST_DRIVE   - um carro, dirigido por voce no teclado.
-enum GameModes { TRAINING, INFERENCE, TEST_DRIVE }
+## HEURISTICA   - um carro, dirigido pela trajetoria calculada (sem aprendizado).
+enum GameModes { TRAINING, INFERENCE, TEST_DRIVE, HEURISTICA }
 @export var game_mode: GameModes = GameModes.TEST_DRIVE
 @export var game_scene: PackedScene
 
@@ -25,6 +26,8 @@ func _modo_da_linha_de_comando() -> int:
 				return GameModes.INFERENCE
 			"test_drive":
 				return GameModes.TEST_DRIVE
+			"heuristica":
+				return GameModes.HEURISTICA
 			_:
 				push_warning("--modo desconhecido; usando o valor da cena")
 	return -1
@@ -68,12 +71,58 @@ func _ready():
 			cars.training_mode = false
 			cars.player_controlled = true
 			sync.speed_up = 1.0
+		GameModes.HEURISTICA:
+			sync.control_mode = sync.ControlModes.HUMAN
+			cars.training_mode = false
+			sync.speed_up = 1.0
 	add_child(new_game_scene)
+
+	if game_mode == GameModes.HEURISTICA:
+		_instalar_piloto(cars)
+	_instalar_trajetoria_de_referencia(cars)
 
 	# A camera livre e instrumentacao de observacao: so aparece com --assistir e
 	# nao altera fisica, observacoes nem recompensa.
 	if "--assistir" in OS.get_cmdline_args():
 		_criar_camera_livre(new_game_scene, cars)
+
+
+## Troca os pontos da linha central, nas observacoes do agente, pelos pontos
+## da trajetoria calculada. E a condicao experimental de RL com heuristica.
+func _instalar_trajetoria_de_referencia(cars: CarManager):
+	var caminho := ""
+	for argumento in OS.get_cmdline_args():
+		if argumento.begins_with("--linha_obs="):
+			caminho = argumento.split("=")[1]
+	if caminho.is_empty():
+		return
+
+	var traj = load("res://scenes/car/trajetoria.gd").new()
+	if not traj.carregar(caminho):
+		return
+	for c in cars.get_children():
+		if c is Car:
+			c.trajetoria_referencia = traj
+	print("[Observacoes] referencia geometrica = trajetoria calculada (%d pontos)" % traj.pontos())
+
+
+## Carrega a trajetoria calculada e entrega aos carros. O caminho vem de
+## --linha=<arquivo>; sem ele, o modo nao tem o que seguir.
+func _instalar_piloto(cars: CarManager):
+	var caminho := ""
+	for argumento in OS.get_cmdline_args():
+		if argumento.begins_with("--linha="):
+			caminho = argumento.split("=")[1]
+	if caminho.is_empty():
+		push_error("modo heuristica exige --linha=<arquivo.csv>")
+		return
+
+	var piloto = load("res://scenes/car/piloto_heuristico.gd").new()
+	if not piloto.carregar(caminho):
+		return
+	for c in cars.get_children():
+		if c is Car:
+			c.piloto_heuristico = piloto
 
 
 func _criar_camera_livre(cena: Node3D, cars: CarManager):

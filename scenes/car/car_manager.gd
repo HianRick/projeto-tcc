@@ -23,9 +23,21 @@ func _ready():
 	spawn_cars(number_of_cars_to_spawn)
 
 
+## Abertura do leque de raios, em graus. Zero mantem o valor da cena.
+## Existe para o experimento de redistribuicao angular: o exemplo de origem
+## usa 360 graus porque tinha adversario e bonificacoes ao redor, mas numa
+## prova contra o relogio quase metade dos raios olha para tras, e o vao
+## entre raios vizinhos a frente chega a 7 m a vinte metros de distancia.
+var _cone_do_sensor := 0.0
+
+
 func spawn_cars(quantidade: int):
 	if not training_mode:
 		quantidade = 1
+
+	for argumento in OS.get_cmdline_args():
+		if argumento.begins_with("--cone="):
+			_cone_do_sensor = float(argumento.split("=")[1])
 
 	for car_id in range(0, quantidade):
 		var car = car_scene.instantiate() as Car
@@ -37,6 +49,14 @@ func spawn_cars(quantidade: int):
 		# treina como se estivesse sozinho na pista.
 		car.set_collision_layer_value(2, true)
 		car.set_collision_mask_value(1, true)
+
+		# Antes de entrar na arvore: e no _ready do sensor que os raios nascem.
+		if _cone_do_sensor > 0.0:
+			var sensor = car.get_node("RayCastSensorWall")
+			sensor.cone_width = _cone_do_sensor
+			if car_id == 0:
+				print("[Sensor] cone de %.0f graus, passo de %.1f graus" % [
+					_cone_do_sensor, _cone_do_sensor / sensor.n_rays_width])
 
 		var car_transform: Transform3D = track.track_path.curve.sample_baked_with_rotation(0.0)
 		car_transform = car_transform.rotated_local(Vector3.UP, PI)

@@ -69,9 +69,12 @@ func _ready():
 
 	# Troca a referencia geometrica das observacoes pela trajetoria calculada.
 	var obs := ""
+	var desvio := ""
 	for a in OS.get_cmdline_args():
 		if a.begins_with("--linha_obs="):
 			obs = a.split("=")[1]
+		elif a.begins_with("--linha_desvio="):
+			desvio = a.split("=")[1]
 	var traj = null
 	if not obs.is_empty():
 		traj = load("res://scenes/car/trajetoria.gd").new()
@@ -89,6 +92,10 @@ func _ready():
 
 	if traj != null:
 		carro.trajetoria_referencia = traj
+	if not desvio.is_empty():
+		var td = load("res://scenes/car/trajetoria.gd").new()
+		if td.carregar(desvio):
+			carro.trajetoria_desvio = td
 
 	# A janela de medida aqui e o tempo, nao o episodio.
 	carro.ai_controller.reset_after = 99999999

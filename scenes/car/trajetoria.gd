@@ -14,6 +14,9 @@ extends RefCounted
 var _x := PackedFloat64Array()
 var _z := PackedFloat64Array()
 var _v := PackedFloat64Array()
+## Deslocamento lateral em relacao a linha central, com sinal: positivo para a
+## esquerda do sentido de percurso.
+var _alfa := PackedFloat64Array()
 var _n := 0
 var _ds := 1.0
 
@@ -40,6 +43,7 @@ func carregar(caminho: String) -> bool:
 			s1 = float(c[0])
 		_x.append(float(c[1]))
 		_z.append(float(c[2]))
+		_alfa.append(float(c[3]))
 		_v.append(float(c[5]))
 		_n += 1
 	f.close()
@@ -61,6 +65,14 @@ func em(s_central: float) -> Vector3:
 	if i < 0:
 		i += _n
 	return Vector3(_x[i], 0.0, _z[i])
+
+
+## Deslocamento lateral da trajetoria, em metros, na posicao pedida.
+func desvio_em(s_central: float) -> float:
+	var i := int(round(s_central / _ds)) % _n
+	if i < 0:
+		i += _n
+	return _alfa[i]
 
 
 func velocidade_em(s_central: float) -> float:

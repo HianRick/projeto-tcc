@@ -79,7 +79,6 @@ func _ready():
 
 	if game_mode == GameModes.HEURISTICA:
 		_instalar_piloto(cars)
-	_instalar_trajetoria_de_referencia(cars)
 	if "--sensores" in OS.get_cmdline_args():
 		_mostrar_sensores(cars)
 
@@ -106,9 +105,16 @@ func _mostrar_sensores(cars: CarManager):
 ## da trajetoria calculada. E a condicao experimental de RL com heuristica.
 func _instalar_trajetoria_de_referencia(cars: CarManager):
 	var caminho := ""
+	## --linha_obs substitui os pontos da linha central; --linha_desvio
+	## acrescenta o deslocamento lateral como observacao propria.
+	var aditivo := false
 	for argumento in OS.get_cmdline_args():
 		if argumento.begins_with("--linha_obs="):
 			caminho = argumento.split("=")[1]
+			aditivo = false
+		elif argumento.begins_with("--linha_desvio="):
+			caminho = argumento.split("=")[1]
+			aditivo = true
 	if caminho.is_empty():
 		return
 
@@ -117,8 +123,12 @@ func _instalar_trajetoria_de_referencia(cars: CarManager):
 		return
 	for c in cars.get_children():
 		if c is Car:
-			c.trajetoria_referencia = traj
-	print("[Observacoes] referencia geometrica = trajetoria calculada (%d pontos)" % traj.pontos())
+			if aditivo:
+				c.trajetoria_desvio = traj
+			else:
+				c.trajetoria_referencia = traj
+	var modo := "desvio lateral como observacao adicional" if aditivo else "referencia geometrica substituida"
+	print("[Observacoes] %s (%d pontos)" % [modo, traj.pontos()])
 
 
 ## Carrega a trajetoria calculada e entrega aos carros. O caminho vem de

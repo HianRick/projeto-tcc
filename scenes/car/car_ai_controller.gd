@@ -9,6 +9,7 @@ var track: Track
 ##   1  angulo atual das rodas
 ##   6  tres pontos seguintes da pista, no referencial do carro
 ##  17  raios do sensor de parede
+##  (+3 deslocamentos laterais da trajetoria, so na condicao com heuristica)
 func get_obs_for_car(car: Car):
 	var player_velocity = car.get_normalized_velocity_in_player_reference()
 	var observations: Array = [player_velocity.x, player_velocity.z, car.angular_velocity.y / 5.0]
@@ -21,6 +22,11 @@ func get_obs_for_car(car: Car):
 
 	observations.append_array(car.get_next_track_points(3, 20))
 	observations.append_array(car.raycast_sensor_wall.get_observation())
+
+	# Condicao com heuristica: 3 valores a mais com o deslocamento lateral da
+	# trajetoria calculada, nas mesmas distancias dos pontos de referencia.
+	if car.trajetoria_desvio != null:
+		observations.append_array(car.get_desvios_da_trajetoria(3, 20))
 	return observations
 
 

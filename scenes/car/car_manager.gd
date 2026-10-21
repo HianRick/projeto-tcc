@@ -31,13 +31,35 @@ func _ready():
 var _cone_do_sensor := 0.0
 
 
+func _carregar_trajetoria(caminho: String):
+	if caminho.is_empty():
+		return null
+	var t = load("res://scenes/car/trajetoria.gd").new()
+	if not t.carregar(caminho):
+		return null
+	print("[Observacoes] trajetoria carregada: %s (%d pontos)" % [caminho, t.pontos()])
+	return t
+
+
 func spawn_cars(quantidade: int):
 	if not training_mode:
 		quantidade = 1
 
+	var caminho_obs := ""
+	var caminho_desvio := ""
 	for argumento in OS.get_cmdline_args():
 		if argumento.begins_with("--cone="):
 			_cone_do_sensor = float(argumento.split("=")[1])
+		elif argumento.begins_with("--linha_obs="):
+			caminho_obs = argumento.split("=")[1]
+		elif argumento.begins_with("--linha_desvio="):
+			caminho_desvio = argumento.split("=")[1]
+
+	# A trajetoria precisa estar instalada ANTES do _ready do Sync, que e quem
+	# negocia o tamanho do vetor de observacoes com o processo de treinamento.
+	# Instalada depois, a rede nasce com 27 entradas e passa a receber 30.
+	var traj_obs = _carregar_trajetoria(caminho_obs)
+	var traj_desvio = _carregar_trajetoria(caminho_desvio)
 
 	for car_id in range(0, quantidade):
 		var car = car_scene.instantiate() as Car
@@ -90,6 +112,9 @@ func spawn_cars(quantidade: int):
 			# O plugin separa os agentes por control_mode: marcar este como HUMAN
 			# faz o sync deixar a heuristica dele em "human".
 			car.ai_controller.control_mode = AIController3D.ControlModes.HUMAN
+
+		car.trajetoria_referencia = traj_obs
+		car.trajetoria_desvio = traj_desvio
 
 		car.ai_controller.track = track
 		car.reset()

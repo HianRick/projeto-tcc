@@ -11,6 +11,7 @@ PY="/c/Users/adm/Desktop/godot-rl-ref/.venv/Scripts/python.exe"
 PROJ="C:/tcc/projeto-tcc"
 SAIDA="C:/tcc/treinos"
 DUR=300
+SEMENTES="${*:-0 1 2}"
 
 cp "$PROJ/model.onnx" "$SAIDA/_bkp.onnx"
 echo "condicao,semente,circuito,distancia_m,vel_media_kmh,vel_max_kmh,batidas,ritmo_s"
@@ -46,8 +47,8 @@ medir() {
   done
 }
 
-for s in 0 1 2; do medir "rl_puro"      "$s" "rl_s$s"  ""; done
-for s in 0 1 2; do medir "rl_heuristica" "$s" "rlh_s$s" "sim"; done
+for s in $SEMENTES; do medir "rl_puro"      "$s" "rl_s$s"  ""; done
+for s in $SEMENTES; do medir "rl_heuristica" "$s" "rlh_s$s" "sim"; done
 
 cp "$SAIDA/_bkp.onnx" "$PROJ/model.onnx"
 rm -f "$SAIDA/_bkp.onnx"

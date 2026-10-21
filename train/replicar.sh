@@ -21,6 +21,11 @@ SAIDA="C:/tcc/treinos"
 PASSOS=300000
 TRAJ="C:/tcc/treinos/linha_pista1.csv"
 
+# Sementes a executar. Sem argumentos, repete as tres originais; com eles,
+# acrescenta as que faltarem - util para ampliar a replicacao sem refazer o
+# que ja foi medido.
+SEMENTES="${*:-0 1 2}"
+
 treinar() {
   local nome="$1" semente="$2" obs="$3"
   echo "=============================================================="
@@ -50,11 +55,11 @@ treinar() {
   echo
 }
 
-for s in 0 1 2; do
+for s in $SEMENTES; do
   treinar "rl_s$s" "$s" ""
 done
 
-for s in 0 1 2; do
+for s in $SEMENTES; do
   treinar "rlh_s$s" "$s" "--linha_obs=$TRAJ"
 done
 

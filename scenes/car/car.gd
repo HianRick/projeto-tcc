@@ -122,6 +122,13 @@ var piloto_heuristico = null
 ## informacao geometrica disponivel ao agente muda.
 var trajetoria_referencia = null
 
+## Quando definida, o deslocamento lateral da trajetoria entra como observacao
+## adicional, em vez de substituir os pontos da linha central. A codificacao
+## importa: embutido nos pontos de referencia, que sao normalizados por 60 m, o
+## desvio ocupa menos de 4% da faixa; normalizado pela meia-largura da pista,
+## ocupa mais de 40%.
+var trajetoria_desvio = null
+
 var initial_transform: Transform3D
 var _just_reset: bool
 
@@ -386,6 +393,17 @@ func update_reward():
 	ai_controller.reward += min(0.0, get_normalized_velocity_in_player_reference().z + 0.1) * 5.0
 
 	previous_offset = current_offset
+
+
+## Deslocamento lateral da trajetoria nos proximos pontos, normalizado pela
+## meia-largura da pista para ocupar toda a faixa da observacao.
+func get_desvios_da_trajetoria(num_points: int, step_size: float) -> Array:
+	var saida: Array[float] = []
+	const MEIA_PISTA := 4.5
+	for i in range(0, num_points):
+		var offset: float = fmod(current_offset + step_size * (i + 1), track_length)
+		saida.append(clampf(trajetoria_desvio.desvio_em(offset) / MEIA_PISTA, -1.0, 1.0))
+	return saida
 
 
 func get_next_track_points(num_points: int, step_size: float) -> Array:
